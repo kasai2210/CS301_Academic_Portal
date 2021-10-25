@@ -1,8 +1,8 @@
 CREATE TRIGGER student_registers
-			BEFORE INSERT
-			ON STUDCOURSE
-			FOR EACH ROW
-			EXECUTE PROCEDURE studReg();
+BEFORE INSERT
+ON STUDCOURSE
+FOR EACH ROW
+EXECUTE PROCEDURE studReg();
 		
 CREATE OR REPLACE FUNCTION studReg()
 	RETURNS trigger AS
@@ -53,7 +53,7 @@ CREATE OR REPLACE FUNCTION studReg()
 				FETCH curO INTO recO;
 				EXIT WHEN NOT FOUND;
 
-				IF (recO.leastCG <= recS.cgpa OR recS.cgpa=0) AND NEW.batch=recO.batches THEN
+				IF (NEW.CGcriteria <= recS.cgpa OR recS.cgpa=0) AND NEW.batch=recO.batches THEN
 					OPEN curC;
 
 					LOOP
@@ -64,12 +64,13 @@ CREATE OR REPLACE FUNCTION studReg()
 						LOOP 
 						FETCH curSC INTO recSC;
 						EXIT WHEN NOT FOUND;
-						IF recSC.timeslot!=NEW.timeslot THEN
+						IF recSC.timeslot!=NEW.timeslot and recSC.year=NEW.year THEN
 							t1 := t1+1;
 						END IF;
-						IF recSC.course = recC.prereq  AND (recSC.grade='A' OR recSC.grade='B' OR recSC.grade='C' OR recSC.grade='D' OR recSC.grade='N')  THEN
+						IF recSC.course = recC.prereq  AND (recSC.grade='A' OR recSC.grade='B' OR recSC.grade='C' OR recSC.grade='D')  THEN
 								i := i+1;
 						END IF;
+						IF recSC.batch=NEW.batch THEN
 						t2:=t2+1;
 
 						END LOOP;
@@ -124,10 +125,10 @@ CREATE OR REPLACE FUNCTION studReg()
 
 
 CREATE TRIGGER ticket_update
-	AFTER UPDATE 
-	ON TICKET 
-	FOR EACH ROW 
-	EXECUTE PROCEDURE ticketUpdate();
+AFTER UPDATE 
+ON TICKET 
+FOR EACH ROW 
+EXECUTE PROCEDURE ticketUpdate();
 
 CREATE OR REPLACE FUNCTION ticketUpdate()
 	RETURNS TRIGGER AS
