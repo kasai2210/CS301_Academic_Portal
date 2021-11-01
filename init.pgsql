@@ -54,3 +54,15 @@ CREATE TABLE Tickets(
     Dean Response Varchar(5),
     Primary Key (StudentID, SectionID)
 );
+CREATE TABLE Teaches(
+    FacultyID Varchar(20),
+    SectionID Varchar(20),
+    CourseID Varchar(20),
+    Primary Key (SectionID, FacultyID, CourseID)
+);
+CREATE TABLE Enrolls(
+    FacultyID Varchar(20),
+    SectionID Varchar(20),
+    CourseID Varchar(20),
+    Primary Key (SectionID, FacultyID, CourseID)
+);
