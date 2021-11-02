@@ -35,7 +35,7 @@ CREATE TABLE StudPastRecord (
 );
 CREATE TABLE CourseCriteria(
     CGCutOff Float,
-    Prerequisite Varchar(20),
+    Prerequisite Varchar(20)[],
     CourseID Varchar(20),
     AllowedBatches Integer,
     Primary Key (CourseID)
