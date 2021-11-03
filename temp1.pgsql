@@ -87,6 +87,14 @@ CREATE OR REPLACE FUNCTION enroll_section()
     $$
     BEGIN
         EXECUTE FORMAT('INSERT INTO %I VALUES($1,$2)',NEW.SectionID) using NEW.StudentID,0;
+        EXECUTE format('
+            DROP TABLE IF EXISTS %I;
+            CREATE TABLE %s(
+                SectionID Varchar(20),
+                Grade Integer,
+                Primary Key (SectionID)
+            )
+        ', NEW.StudentID, NEW.StudentID);
         RETURN NEW;
     END;
 $$ language plpgsql;
@@ -237,9 +245,87 @@ AFTER INSERT
 ON Teaches
 FOR EACH ROW
 EXECUTE PROCEDURE faculty_teaches();
-            
 
 
+CREATE TABLE tempo(
+    StudentID Varchar(20),
+    Grade Integer,
+    Primary Key(StudentID)
+);
+
+\copy tempo(StudentID, Grade) FROM 'C:\Users\chhab\Desktop\puneet.csv' DELIMITER ',' CSV HEADER;
+
+CREATE OR REPLACE FUNCTION add_grade(section Varchar(20))
+    RETURNS RECORD AS
+    $$
+    DECLARE
+        id Varchar(20);
+        grades Integer;
+        t RECORD;
+        curtemp CURSOR
+            FOR SELECT *
+            FROM tempo;
+        sections RECORD;
+        sec CURSOR
+            FOR SELECT * 
+            FROM section
+            WHERE section.SectionID = NEW.SectionID;
+    BEGIN
+        OPEN sec;
+        LOOP
+            FETCH sec INTO sections;
+            EXIT WHEN NOT FOUND;
+            RETURN sections;
+        END LOOP;
+        CLOSE sec;
+    END;
+$$ language plpgsql; 
+
+CREATE TABLE result_tillnow(
+    SectionID varchar(20),
+    Primary Key(SectionID)
+);
+CREATE TRIGGER res
+AFTER INSERT
+ON result_tillnow
+FOR EACH ROW
+EXECUTE PROCEDURE add_grade();
+
+
+CREATE OR REPLACE FUNCTION add_grade(section varchar(20))
+    RETURNS VOID AS
+    $$
+    DECLARE
+        id varchar(20);
+        grades Integer;
+        t RECORD;
+        curtemp CURSOR
+            FOR SELECT *
+            FROM tempo;
+        sec refcursor; sections RECORD;
+    BEGIN
+        
+        OPEN sec FOR EXECUTE FORMAT('select * from %I',section);
+        LOOP
+            FETCH sec INTO sections;
+            EXIT WHEN NOT FOUND;
+            EXECUTE FORMAT('select StudentID from %I',section) INTO id;
+            OPEN curtemp;
+            LOOP
+                FETCH curtemp INTO t;
+                EXIT WHEN NOT FOUND;
+                IF t.StudentID = id THEN
+                    EXECUTE FORMAT('UPDATE %I SET Grade =$1 WHERE StudentID = $2',section) using t.grade,id;
+                    EXECUTE FORMAT('INSERT INTO %I VALUES($1,$2)',id)using section,t.grade;
+                END IF;
+            END LOOP;
+            CLOSE curtemp;
+        END LOOP;
+        CLOSE sec;
+        Delete FROM tempo;
+        
+    END;
+$$ language plpgsql;
 
 
                             
@@ -267,7 +353,13 @@ INSERT INTO Catalogue VALUES('cs501', 's2', 3, '3-1-0-5');
 INSERT INTO Teaches VALUES('puneet','cs501_2021_3_s2','cs501');
 INSERT INTO CourseCriteria VALUES(8,'cs301','cs501', 2019);
 INSERT INTO Enrolls VALUES('2019eeb1185','cs501_2021_3_s2','cs501');
-INSERT INTO Students VALUES('2019eeb1185', 'Riya',2019, 'ee');
-INSERT INTO StudPastRecord VALUES('2019eeb1185', 9, 18, 20,12);
-INSERT INTO Enrolls VALUES('2019eeb1185','cs301_2020_2_cs','cs301');
+INSERT INTO Students VALUES('2019eeb1183', 'Ri',2019, 'me');
+INSERT INTO StudPastRecord VALUES('2019eeb1183', 8, 18, 20,10);
+INSERT INTO Enrolls VALUES('2019eeb1183','cs201_2019_1_s1','cs201');
 INSERT INTO Enrolls VALUES('2019eeb1183','cs301_2020_2_cs','cs301');
+
+
+INSERT INTO Students VALUES('eeb20191183', 'Ri',2019, 'me');
+INSERT INTO StudPastRecord VALUES('eeb20191183', 8, 18, 20,10);
+INSERT INTO Enrolls VALUES('eeb20191183','cs201_2019_1_s1','cs201');
+INSERT INTO Enrolls VALUES('eeb20191183','cs301_2020_2_cs','cs301');
