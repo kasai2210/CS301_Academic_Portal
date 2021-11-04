@@ -244,7 +244,7 @@ CREATE OR REPLACE FUNCTION updateCG()
       $$
       LANGUAGE plpgsql;
 
-#insert a course in a course catalogue
+--insert a course in a course catalogue
 
 INSERT INTO COURSE VALUES(course TEXT, credits FLOAT, lecture INTEGER, tutorial INTEGER, practical INTEGER);
 INSERT INTO CATALOGUE VALUES(course TEXT, credits FLOAT, prereq TEXT, np INTEGER);
