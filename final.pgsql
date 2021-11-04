@@ -75,7 +75,14 @@ CREATE TABLE dean(
     Primary Key (StudentID, SectionID)
 );
 
+create user dean with password '1';
 GRANT USAGE ON SCHEMA public TO dean;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO dean;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO dean;
+
+create group studentgroup;
+create group facultygroup;
+create group advisorgroup;
 
 CREATE TRIGGER add_student
 AFTER INSERT 
@@ -168,6 +175,7 @@ GRANT SELECT ON Catalogue TO studentgroup;
 GRANT SELECT ON Teaches TO studentgroup;
 GRANT SELECT ON StudPastRecord TO studentgroup;
 GRANT SELECT ON CourseCriteria TO studentgroup;
+GRANT SELECT ON CourseOfferings TO studentgroup;
 
 CREATE OR REPLACE FUNCTION newStudent(username NAME, pass text)
     RETURNS VOID
@@ -190,6 +198,12 @@ CREATE OR REPLACE FUNCTION newStudent(username NAME, pass text)
         EXECUTE S;
     END;
 $$;
+
+CREATE TABLE tempo(
+    StudentID Varchar(20),
+    Grade Integer,
+    Primary Key(StudentID)
+);
 
 GRANT INSERT ON Teaches TO facultygroup;
 GRANT INSERT ON CourseOfferings TO facultygroup;
@@ -314,6 +328,7 @@ CREATE OR REPLACE FUNCTION advisor_tickets()
         EXECUTE FORMAT('
             INSERT INTO %I VALUES ($1, $2, $3, $4, $5)
         ', CONCAT('adv_', AdvID1)) using StudentID1, SectionID1, FacultyResponse1, AdvisorResponse1, DeanResponse1;
+        RAISE NOTICE 'Ticket forwarded to advisor';
         RETURN NEW;
     END
 $$ language plpgsql;
@@ -344,8 +359,7 @@ CREATE OR REPLACE FUNCTION ticket_result()
         SELECT Department FROM Students WHERE Students.StudentID=StudentID1 INTO Department1;
         SELECT FacultyID FROM Advisor WHERE Batch=Batch1 AND Department=Department1 INTO AdvID1;
         SELECT CourseID FROM Teaches WHERE Teaches.SectionID=SectionID1 INTO CourseID1;
-        IF DeanResponse1='Y' THEN 
-            INSERT INTO Enrolls VALUES(StudentID1, SectionID1, CourseID1);
+        INSERT INTO Enrolls VALUES(StudentID1, SectionID1, CourseID1);
         END IF;
         RETURN NEW;
     END
@@ -375,6 +389,7 @@ CREATE OR REPLACE FUNCTION dean_tickets()
         EXECUTE FORMAT('
             INSERT INTO dean VALUES ($1, $2, $3, $4, $5)
         ') using StudentID1, SectionID1, FacultyResponse1, AdvisorResponse1, DeanResponse1;
+        RAISE NOTICE 'Ticket forwarded to dean';
         RETURN NEW;
     END
 $$ language plpgsql;
@@ -506,8 +521,14 @@ CREATE OR REPLACE FUNCTION Enrolling()
                 CLOSE curcriteria;
             ELSE
                 IF(DeanResponse1='Y') THEN
+                    RAISE NOTICE 'Dean accepted ticket';
                     RETURN NEW;
                 END IF;
+                IF(DeanResponse1='N') THEN
+                    RAISE EXCEPTION 'Dean rejected ticket';
+                    RETURN NULL;
+                END IF;
+                RAISE NOTICE 'Ticket generated';
                 EXECUTE FORMAT('INSERT INTO %I VALUES ($1,$2,$3,$4,$5)', fac1) using NEW.StudentID,NEW.SectionID,'NA','NA','NA';
                 RETURN NULL;
             END IF;
@@ -519,13 +540,7 @@ CREATE OR REPLACE FUNCTION Enrolling()
     END;
 $$ language plpgsql;
 
-CREATE TABLE tempo(
-    StudentID Varchar(20),
-    Grade Integer,
-    Primary Key(StudentID)
-);
-
-\copy tempo(StudentID, Grade) FROM 'C:\Users\heman\Desktop\puneet.csv' DELIMITER ',' CSV HEADER;
+\copy tempo(StudentID, Grade) FROM '/home/bhoopen/Desktop/puneet.csv' DELIMITER ',' CSV HEADER;
 
 CREATE OR REPLACE FUNCTION add_grade(section varchar(20))
     RETURNS VOID AS
@@ -600,6 +615,34 @@ CREATE OR REPLACE FUNCTION cgcalculate(id varchar(20))
         RETURN output;
     END;
 $$ language plpgsql;
+
+
+insert into students values('eeb1151', 'Bhoopen', 2019, 'ee');
+select newstudent('eeb1151_aims', '1');
+alter user eeb1151_aims with password '1';
+insert into catalogue values('cs101', 'cs', 4, '1111');
+INSERT INTO CourseCriteria VALUES(7,'cs101','ee101', 2019);
+insert into studpastrecord values('eeb1151', 9, 18, 9, 5);
+insert into faculty values('gunturi', 'Vishwanath', 'cs');
+select newfaculty('gunturi_aims', '1');
+alter user gunturi_aims with password '1';
+insert into advisor values('roy', 2019, 'ee');
+insert into teaches values('gunturi', 'cs101_2019_2_cs', 'cs101');
+select newadvisor('adv_roy_aims', '1');
+alter user adv_roy_aims with password '1';
+insert into enrolls values('eeb1151', 'cs101_2019_2_cs', 'cs101');
+UPDATE StudPastRecord SET CurrCredits = 25 WHERE StudentID = 'eeb1151';
+UPDATE saifu SET FacultyResponse = 'Y' WHERE StudentID = 'eeb1151';
+UPDATE adv_roy SET AdvisorResponse = 'N' WHERE StudentID = 'eeb1151';
+UPDATE dean SET DeanResponse = 'N' WHERE StudentID = 'eeb1151' AND SectionID = 'ee102_2019_2_ee';
+
+
+
+
+
+
+
+
 
 
 INSERT INTO Advisor VALUES('dkm', 2019, 'me');
